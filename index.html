@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AttendEase</title>
+<style>
+:root { --bg:#F4F3FA; --surface:#FFFFFF; --fg:#1D1B33; --muted:#63627D; --line:#E3E1F0; --accent:#5B4FD6; --accent-ink:#FFFFFF; --ok:#14876B; --bad:#C93B50; --soft:#ECEAFB; color-scheme: light; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#121127; --surface:#1C1A36; --fg:#EDEBFF; --muted:#A6A3C7; --line:#2E2B52; --accent:#9B92FF; --accent-ink:#121127; --ok:#4FD1A9; --bad:#FF7A8A; --soft:#2A2750; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 15px; line-height: 1.5; padding: 16px 16px 120px; }
+.wrap { max-width: 560px; margin: 0 auto; display: grid; gap: 16px; }
+h1, h2, h3 { margin: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.label { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; display: grid; gap: 6px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.between { justify-content: space-between; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.btn { font: inherit; font-weight: 700; border: 0; border-radius: 12px; padding: 12px 16px; cursor: pointer; background: var(--accent); color: var(--accent-ink); }
+.btn.ok { background: var(--ok); color: #fff; font-size: 17px; padding: 18px 16px; }
+.btn.bad { background: var(--bad); color: #fff; font-size: 17px; padding: 18px 16px; }
+.btn.ghost { background: var(--soft); color: var(--fg); }
+.btn.danger { background: transparent; color: var(--bad); border: 1px solid var(--bad); padding: 6px 10px; font-size: 13px; }
+input, select { font: inherit; width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+.pill { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.pill.bad { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+.ring { width: 136px; height: 136px; border-radius: 50%; flex: none; display: grid; place-items: center; background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--soft) 0); }
+.ring span { width: 106px; height: 106px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-weight: 700; font-size: 22px; font-variant-numeric: tabular-nums; }
+.bar { height: 8px; border-radius: 99px; background: var(--soft); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 99px; background: var(--c); width: calc(var(--p) * 1%); }
+.stat-n { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.warnbox { border: 1px solid var(--bad); border-radius: 14px; padding: 12px 14px; background: color-mix(in srgb, var(--bad) 10%, transparent); }
+.rows > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.rows > div:last-child { border-bottom: 0; }
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.tabs .wrap { display: flex; gap: 0; padding: 0 16px; }
+.tab { flex: 1; background: none; border: 0; color: var(--muted); font: inherit; font-size: 13px; font-weight: 700; padding: 12px 4px; cursor: pointer; }
+.tab[aria-current="true"] { color: var(--accent); }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 92px; background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-weight: 700; max-width: calc(100% - 32px); opacity: 0; transition: opacity .2s; pointer-events: none; text-align: center; }
+.toast.show { opacity: 1; }
+.hidden { display: none !important; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+</head>
+<body>
+
+<div id="login" class="wrap" style="padding-top:40px">
+  <h1 style="font-size:40px">AttendEase</h1>
+  <p class="muted" style="color:var(--accent);font-weight:700">Track &middot; Attend &middot; Grow</p>
+  <form id="login-form" class="card">
+    <h2 style="font-size:20px">Student login</h2>
+    <label class="label">Roll number
+      <input id="l-roll" required autocomplete="off" placeholder="e.g. 26MC1TA141"></label>
+    <label class="label">Full name
+      <input id="l-name" required autocomplete="name" placeholder="Your name"></label>
+    <button class="btn" type="submit">Log in</button>
+    <p class="small muted">Your attendance is saved to the cloud and syncs across your devices.</p>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+  <main class="wrap">
+    <div class="row between">
+      <h1 style="font-size:22px">AttendEase</h1>
+      <span id="avatar" class="pill ok"></span>
+    </div>
+    <section id="home" class="wrap" style="padding:0"></section>
+    <section id="mark" class="wrap hidden" style="padding:0"></section>
+    <section id="history" class="wrap hidden" style="padding:0"></section>
+    <section id="profile" class="wrap hidden" style="padding:0"></section>
+  </main>
+  <nav class="tabs" aria-label="Main">
+    <div class="wrap">
+      <button class="tab" data-nav="home">Home</button>
+      <button class="tab" data-nav="mark">Mark</button>
+      <button class="tab" data-nav="history">History</button>
+      <button class="tab" data-nav="profile">Profile</button>
+    </div>
+  </nav>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+try { db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch (e) {}
+
+let student = null;
+try { student = JSON.parse(localStorage.getItem("attendease.student")); } catch (e) {}
+
+let subjects = [];
+let records = [];        // this student's records only, each with id = doc id
+let view = "home";
+let histFilter = "all";
+let stops = [];          // unsubscribe functions for live listeners
+let toastTimer = null;
+
+function isoOf(d) {
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function todayISO() { return isoOf(new Date()); }
+function fmtDate(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
+function recId(subjectId, date) { return student.roll + "_" + subjectId + "_" + date; }
+
+function stats(subjectId) {
+  const recs = records.filter(r => !subjectId || r.subjectId === subjectId);
+  const total = recs.length;
+  const att = recs.filter(r => r.status === "present").length;
+  const pctRaw = total ? (att / total) * 100 : null;
+  return { att, total, absent: total - att, pctRaw, pct: pctRaw == null ? null : pctRaw.toFixed(1) };
+}
+function neededFor(att, total) {
+  if (!total || (att / total) * 100 >= 75) return 0;
+  return Math.ceil((0.75 * total - att) / 0.25);
+}
+function colorFor(p) { return p == null ? "var(--muted)" : p >= 75 ? "var(--ok)" : "var(--bad)"; }
+
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2400);
+}
+
+function statBlock(label, value, color) {
+  return `<div><div class="stat-n" style="color:${color}">${value}</div><div class="label" style="font-size:11px">${label}</div></div>`;
+}
+
+function subjectCard(s) {
+  const x = stats(s.id);
+  const pill = x.pct == null ? `<span class="pill">No classes</span>`
+    : `<span class="pill ${x.pctRaw >= 75 ? "ok" : "bad"}">${x.pct}%</span>`;
+  const need = x.pctRaw != null && x.pctRaw < 75
+    ? `<span style="color:var(--bad)">Need ${neededFor(x.att, x.total)} more</span>` : "";
+  return `
+    <div class="card">
+      <div class="row between"><strong>${esc(s.name)}</strong>${pill}</div>
+      <div class="bar" style="--c:${colorFor(x.pctRaw)};--p:${x.pctRaw ?? 0}"><i></i></div>
+      <div class="row between small muted"><span>Attended ${x.att} of ${x.total}</span>${need}</div>
+    </div>`;
+}
+
+function renderHome() {
+  const o = stats(null);
+  const low = o.pctRaw != null && o.pctRaw < 75;
+  const warn = low ? `
+    <div class="warnbox" role="alert">
+      <strong style="color:var(--bad)">Low attendance</strong>
+      <p class="small" style="margin-top:4px">You are below 75%. Attend the next ${neededFor(o.att, o.total)} classes to get back to 75%.</p>
+    </div>` : "";
+  $("#home").innerHTML = `
+    <div>
+      <p class="muted">Hello,</p>
+      <h2>${esc(student.name.split(" ")[0])}</h2>
+    </div>
+    <section class="card" style="gap:16px">
+      <div class="row" style="gap:20px">
+        <div class="ring" style="--p:${o.pctRaw ?? 0};--c:${colorFor(o.pctRaw)}"><span>${o.pct == null ? "–" : o.pct + "%"}</span></div>
+        <div style="flex:1;min-width:140px;display:grid;gap:12px">
+          <p class="label">Overall attendance</p>
+          <div class="grid3">
+            ${statBlock("Attended", o.att, "var(--ok)")}
+            ${statBlock("Absent", o.absent, "var(--bad)")}
+            ${statBlock("Total", o.total, "var(--fg)")}
+          </div>
+        </div>
+      </div>
+      ${warn}
+    </section>
+    <h3>Subject-wise</h3>
+    ${subjects.length ? subjects.map(subjectCard).join("") : `<p class="muted">No subjects yet. Your teacher will add them.</p>`}`;
+}
+
+function renderMark() {
+  const opts = subjects.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("");
+  $("#mark").innerHTML = `
+    <h2>Mark attendance</h2>
+    <div class="card">
+      ${subjects.length ? "" : `<p class="muted">No subjects yet. Your teacher will add them.</p>`}
+      <label class="label">Subject<select id="m-sub">${opts}</select></label>
+      <label class="label">Date<input type="date" id="m-date" value="${todayISO()}" max="${todayISO()}"></label>
+      <div class="grid2">
+        <button class="btn ok" data-action="mark" data-status="present">Present</button>
+        <button class="btn bad" data-action="mark" data-status="absent">Absent</button>
+      </div>
+      <p id="m-note" class="small muted"></p>
+    </div>`;
+  updateMarkNote();
+}
+
+function updateMarkNote() {
+  const sub = $("#m-sub"), date = $("#m-date"), note = $("#m-note");
+  if (!sub || !date || !note) return;
+  if (!date.value) { note.textContent = "Pick a date."; return; }
+  const rec = records.find(r => r.id === recId(sub.value, date.value));
+  note.textContent = rec
+    ? `Already marked ${rec.status}. Tapping a button changes it.`
+    : "Not marked yet for this date.";
+}
+
+function markAttendance(status) {
+  const sub = $("#m-sub"), date = $("#m-date");
+  if (!sub || !sub.value) { toast("No subject selected"); return; }
+  if (!date.value) { toast("Pick a date"); return; }
+  const subject = subjects.find(s => s.id === sub.value);
+  db.collection("records").doc(recId(sub.value, date.value)).set({
+    roll: student.roll,
+    subjectId: sub.value,
+    date: date.value,
+    status,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  })
+    .then(() => toast(`${subject.name}: ${status} for ${fmtDate(date.value)} saved`))
+    .catch(e => toast("Could not save: " + e.message));
+}
+
+function renderHistory() {
+  const list = records
+    .filter(r => histFilter === "all" || r.subjectId === histFilter)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const opts = [`<option value="all">All subjects</option>`]
+    .concat(subjects.map(s => `<option value="${esc(s.id)}" ${s.id === histFilter ? "selected" : ""}>${esc(s.name)}</option>`))
+    .join("");
+  const rows = list.length ? list.map(r => {
+    const s = subjects.find(x => x.id === r.subjectId);
+    const present = r.status === "present";
+    return `
+      <div>
+        <div><div style="font-weight:700">${s ? esc(s.name) : "Removed subject"}</div>
+          <div class="small muted">${fmtDate(r.date)}</div></div>
+        <div class="row" style="flex-wrap:nowrap">
+          <span class="pill ${present ? "ok" : "bad"}">${present ? "Present" : "Absent"}</span>
+          <button class="btn danger" data-action="del" data-id="${esc(r.id)}">Delete</button>
+        </div>
+      </div>`;
+  }).join("") : `<p class="muted">No records yet. Mark attendance to see it here.</p>`;
+  $("#history").innerHTML = `
+    <h2>History</h2>
+    <label class="label">Filter<select id="h-sub">${opts}</select></label>
+    <div class="card rows">${rows}</div>`;
+}
+
+function renderProfile() {
+  $("#profile").innerHTML = `
+    <h2>Profile</h2>
+    <div class="card">
+      <p class="label">Name</p><p>${esc(student.name)}</p>
+      <p class="label">Roll number</p><p>${esc(student.roll)}</p>
+    </div>
+    <div class="card">
+      <p class="small muted">Your data is stored in the cloud under your roll number.</p>
+      <button class="btn ghost" data-action="logout">Log out on this device</button>
+    </div>`;
+}
+
+function render() {
+  if (!student) return;
+  const fn = { home: renderHome, mark: renderMark, history: renderHistory, profile: renderProfile }[view];
+  fn();
+  ["home", "mark", "history", "profile"].forEach(v => $("#" + v).classList.toggle("hidden", v !== view));
+  document.querySelectorAll("[data-nav]").forEach(b => b.setAttribute("aria-current", b.dataset.nav === view ? "true" : "false"));
+  $("#avatar").textContent = student.name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function go(v) {
+  view = v;
+  render();
+  window.scrollTo(0, 0);
+}
+
+function startSync() {
+  stopSync();
+  stops.push(db.collection("subjects").orderBy("name").onSnapshot(snap => {
+    subjects = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  }, e => toast("Sync error: " + e.message)));
+  stops.push(db.collection("records").where("roll", "==", student.roll).onSnapshot(snap => {
+    records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  }, e => toast("Sync error: " + e.message)));
+}
+
+function stopSync() {
+  stops.forEach(f => f());
+  stops = [];
+}
+
+function showApp() {
+  $("#login").classList.add("hidden");
+  $("#app").classList.remove("hidden");
+  startSync();
+  go("home");
+}
+
+function logout() {
+  stopSync();
+  student = null;
+  subjects = [];
+  records = [];
+  try { localStorage.removeItem("attendease.student"); } catch (e) {}
+  $("#app").classList.add("hidden");
+  $("#login").classList.remove("hidden");
+}
+
+function deleteRecord(id) {
+  if (!confirm("Delete this attendance record?")) return;
+  db.collection("records").doc(id).delete()
+    .then(() => toast("Record deleted"))
+    .catch(e => toast("Could not delete: " + e.message));
+}
+
+document.addEventListener("submit", e => {
+  e.preventDefault();
+  if (e.target.id !== "login-form") return;
+  const roll = $("#l-roll").value.trim();
+  const name = $("#l-name").value.trim();
+  if (!roll || !name) { toast("Enter your roll number and name"); return; }
+  student = { roll, name };
+  try { localStorage.setItem("attendease.student", JSON.stringify(student)); } catch (err) {}
+  db.collection("students").doc(roll).set({ roll, name }, { merge: true }).catch(() => {});
+  showApp();
+});
+
+document.addEventListener("click", e => {
+  const nav = e.target.closest("[data-nav]");
+  if (nav) { go(nav.dataset.nav); return; }
+  const act = e.target.closest("[data-action]");
+  if (!act) return;
+  if (act.dataset.action === "mark") markAttendance(act.dataset.status);
+  if (act.dataset.action === "del") deleteRecord(act.dataset.id);
+  if (act.dataset.action === "logout") logout();
+});
+
+document.addEventListener("change", e => {
+  if (e.target.id === "m-sub" || e.target.id === "m-date") updateMarkNote();
+  if (e.target.id === "h-sub") { histFilter = e.target.value; renderHistory(); }
+});
+
+if (student) showApp();
+</script>
+</body>
+</html>

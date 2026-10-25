@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AttendEase Admin</title>
+<style>
+:root { --bg:#F4F3FA; --surface:#FFFFFF; --fg:#1D1B33; --muted:#63627D; --line:#E3E1F0; --accent:#5B4FD6; --accent-ink:#FFFFFF; --ok:#14876B; --bad:#C93B50; --soft:#ECEAFB; color-scheme: light; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#121127; --surface:#1C1A36; --fg:#EDEBFF; --muted:#A6A3C7; --line:#2E2B52; --accent:#9B92FF; --accent-ink:#121127; --ok:#4FD1A9; --bad:#FF7A8A; --soft:#2A2750; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 15px; line-height: 1.5; padding: 16px 16px 40px; }
+.wrap { max-width: 800px; margin: 0 auto; display: grid; gap: 16px; }
+h1, h2, h3 { margin: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.label { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; display: grid; gap: 6px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.between { justify-content: space-between; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.stat-n { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.btn { font: inherit; font-weight: 700; border: 0; border-radius: 12px; padding: 12px 16px; cursor: pointer; background: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: var(--soft); color: var(--fg); }
+input { font: inherit; width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+.pill { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.pill.bad { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.hidden { display: none !important; }
+#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 24px; background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-weight: 700; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px); }
+#toast.show { opacity: 1; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+</head>
+<body>
+
+<div id="gate" class="wrap" style="max-width:420px;padding-top:40px">
+  <h1>AttendEase admin</h1>
+  <form id="auth-form" class="card">
+    <label class="label">Admin email<input id="a-email" type="email" required autocomplete="username"></label>
+    <label class="label">Password<input id="a-pass" type="password" required autocomplete="current-password"></label>
+    <button class="btn" type="submit">Sign in</button>
+    <p id="auth-msg" class="small" style="color:var(--bad)"></p>
+  </form>
+</div>
+
+<div id="dash" class="wrap hidden">
+  <div class="row between">
+    <h1 style="font-size:24px">Attendance dashboard</h1>
+    <button class="btn ghost" id="signout">Sign out</button>
+  </div>
+
+  <section class="card">
+    <div class="grid3">
+      <div><div class="stat-n" id="s-students">0</div><div class="label" style="font-size:11px">Students</div></div>
+      <div><div class="stat-n" id="s-avg">–</div><div class="label" style="font-size:11px">Average attendance</div></div>
+      <div><div class="stat-n" id="s-low" style="color:var(--bad)">0</div><div class="label" style="font-size:11px">Below 75%</div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row between">
+      <h2 style="font-size:18px">Students</h2>
+      <button class="btn ghost" id="export">Download CSV</button>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Roll</th><th>Name</th><th>Attended</th><th>Percent</th><th>Status</th></tr></thead>
+        <tbody id="students-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 style="font-size:18px">Subjects</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Subject</th><th>Attended</th><th>Percent</th></tr></thead>
+        <tbody id="subjects-body"></tbody>
+      </table>
+    </div>
+    <form id="sub-form" class="row">
+      <input id="new-sub" placeholder="New subject name" maxlength="40" aria-label="New subject name" style="flex:1;min-width:200px">
+      <button class="btn" type="submit">Add subject</button>
+    </form>
+  </section>
+</div>
+
+<div id="toast" role="status"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let subjects = [], records = [], names = {};
+let stops = [];
+let exportRows = [];
+
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), 2400);
+}
+
+function pillFor(p) {
+  if (p == null) return `<span class="pill">No classes</span>`;
+  return `<span class="pill ${p >= 75 ? "ok" : "bad"}">${p >= 75 ? "OK" : "Low"}</span>`;
+}
+
+function render() {
+  // Per-student totals from records, plus students who have no records yet.
+  const byRoll = {};
+  records.forEach(r => {
+    const s = byRoll[r.roll] || (byRoll[r.roll] = { roll: r.roll, att: 0, total: 0 });
+    s.total++;
+    if (r.status === "present") s.att++;
+  });
+  Object.keys(names).forEach(roll => { if (!byRoll[roll]) byRoll[roll] = { roll, att: 0, total: 0 }; });
+
+  const students = Object.values(byRoll)
+    .map(s => ({ ...s, name: names[s.roll] || "Unnamed", pctRaw: s.total ? (s.att / s.total) * 100 : null }))
+    .sort((a, b) => a.roll.localeCompare(b.roll));
+
+  const totalAtt = records.filter(r => r.status === "present").length;
+  const low = students.filter(s => s.pctRaw != null && s.pctRaw < 75).length;
+  $("#s-students").textContent = students.length;
+  $("#s-avg").textContent = records.length ? ((totalAtt / records.length) * 100).toFixed(1) + "%" : "–";
+  $("#s-low").textContent = low;
+
+  $("#students-body").innerHTML = students.length ? students.map(s => `
+    <tr>
+      <td>${esc(s.roll)}</td>
+      <td>${esc(s.name)}</td>
+      <td>${s.att} / ${s.total}</td>
+      <td>${s.pctRaw == null ? "–" : s.pctRaw.toFixed(1) + "%"}</td>
+      <td>${pillFor(s.pctRaw)}</td>
+    </tr>`).join("") : `<tr><td colspan="5" class="muted">No students yet.</td></tr>`;
+
+  $("#subjects-body").innerHTML = subjects.length ? subjects.map(s => {
+    const recs = records.filter(r => r.subjectId === s.id);
+    const att = recs.filter(r => r.status === "present").length;
+    const pct = recs.length ? (att / recs.length) * 100 : null;
+    return `<tr><td>${esc(s.name)}</td><td>${att} / ${recs.length}</td><td>${pct == null ? "–" : pct.toFixed(1) + "%"}</td></tr>`;
+  }).join("") : `<tr><td colspan="3" class="muted">No subjects yet. Add one below.</td></tr>`;
+
+  const subName = id => (subjects.find(s => s.id === id) || {}).name || "Removed subject";
+  exportRows = records.map(r => [r.roll, names[r.roll] || "", subName(r.subjectId), r.date, r.status]);
+}
+
+function startSync() {
+  stopSync();
+  stops.push(db.collection("subjects").orderBy("name").onSnapshot(snap => {
+    subjects = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  }, e => toast("Sync error: " + e.message)));
+  stops.push(db.collection("records").onSnapshot(snap => {
+    records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  }, e => toast("Sync error: " + e.message)));
+  stops.push(db.collection("students").onSnapshot(snap => {
+    names = {};
+    snap.docs.forEach(d => { names[d.id] = d.data().name; });
+    render();
+  }, e => toast("Sync error: " + e.message)));
+}
+
+function stopSync() {
+  stops.forEach(f => f());
+  stops = [];
+}
+
+auth.onAuthStateChanged(user => {
+  $("#gate").classList.toggle("hidden", !!user);
+  $("#dash").classList.toggle("hidden", !user);
+  if (user) startSync(); else stopSync();
+});
+
+$("#auth-form").addEventListener("submit", e => {
+  e.preventDefault();
+  $("#auth-msg").textContent = "";
+  auth.signInWithEmailAndPassword($("#a-email").value.trim(), $("#a-pass").value)
+    .catch(err => { $("#auth-msg").textContent = err.message; });
+});
+
+$("#signout").addEventListener("click", () => auth.signOut());
+
+$("#sub-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const name = $("#new-sub").value.trim();
+  if (!name) { toast("Type a subject name"); return; }
+  db.collection("subjects").add({ name })
+    .then(() => { $("#new-sub").value = ""; toast("Subject added"); })
+    .catch(err => toast("Could not add: " + err.message));
+});
+
+$("#export").addEventListener("click", () => {
+  const cell = v => `"${String(v).replace(/"/g, '""')}"`;
+  const lines = [["Roll", "Name", "Subject", "Date", "Status"], ...exportRows]
+    .map(row => row.map(cell).join(","));
+  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "attendease-records.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+</script>
+</body>
+</html>
