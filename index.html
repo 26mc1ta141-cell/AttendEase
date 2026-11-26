@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#5146D8">
+<title>AttendEase</title>
+<link rel="manifest" href="./Manifest.json">
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ min-height:100vh;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ font-family:Arial,sans-serif;
+ background:linear-gradient(135deg,#17143d,#5146d8);
+ color:white;
+ padding:20px;
+}
+.card{
+ width:100%;
+ max-width:420px;
+ padding:40px 25px;
+ text-align:center;
+ background:rgba(255,255,255,.12);
+ border:1px solid rgba(255,255,255,.2);
+ border-radius:25px;
+}
+.logo{
+ width:85px;height:85px;
+ margin:auto auto 20px;
+ border-radius:22px;
+ background:white;color:#5146d8;
+ display:grid;place-items:center;
+ font-size:55px;font-weight:bold;
+}
+h1{font-size:32px;margin:10px 0}
+p{color:#e4e1ff;line-height:1.6}
+a{
+ display:block;
+ margin:18px 0;
+ padding:16px;
+ border-radius:13px;
+ text-decoration:none;
+ font-weight:bold;
+ background:white;color:#5146d8;
+}
+a.admin{background:#29245e;color:white}
+small{color:#d5d0ff}
+</style>
+</head>
+<body>
+<div class="card">
+ <div class="logo">✓</div>
+ <h1>AttendEase</h1>
+ <p>Smart Attendance Management System</p>
+
+ <a href="./student.html">Student Portal →</a>
+ <a class="admin" href="./admin.html">Admin Portal →</a>
+
+ <small>Simple • Smart • Secure</small>
+</div>
+
+<script>
+if ("serviceWorker" in navigator) {
+ window.addEventListener("load", () => {
+  navigator.serviceWorker.register("./Service-worker.js")
+   .catch(error => console.log(error));
+ });
+}
+</script>
+</body>
+</html>
