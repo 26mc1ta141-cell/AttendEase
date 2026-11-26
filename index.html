@@ -28,13 +28,13 @@ body{
  border:1px solid rgba(255,255,255,.2);
  border-radius:25px;
 }
-.logo{
- width:85px;height:85px;
- margin:auto auto 20px;
- border-radius:22px;
- background:white;color:#5146d8;
- display:grid;place-items:center;
- font-size:55px;font-weight:bold;
+.logo {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    border-radius: 22px;
+    display: block;
+    margin: 0 auto 20px;
 }
 h1{font-size:32px;margin:10px 0}
 p{color:#e4e1ff;line-height:1.6}
@@ -53,7 +53,9 @@ small{color:#d5d0ff}
 </head>
 <body>
 <div class="card">
- <div class="logo">✓</div>
+ <img class="logo"
+src="./icon-512.png"
+alt="AttendEase Logo">
  <h1>AttendEase</h1>
  <p>Smart Attendance Management System</p>
 
