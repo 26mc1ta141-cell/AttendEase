@@ -319,13 +319,6 @@ function logout() {
   $("#login").classList.remove("hidden");
 }
 
-function deleteRecord(id) {
-  if (!confirm("Delete this attendance record?")) return;
-  db.collection("records").doc(id).delete()
-    .then(() => toast("Record deleted"))
-    .catch(e => toast("Could not delete: " + e.message));
-}
-
 document.addEventListener("submit", e => {
   e.preventDefault();
   if (e.target.id !== "login-form") return;
@@ -344,12 +337,10 @@ document.addEventListener("click", e => {
   const act = e.target.closest("[data-action]");
   if (!act) return;
   if (act.dataset.action === "mark") markAttendance(act.dataset.status);
-  if (act.dataset.action === "del") deleteRecord(act.dataset.id);
   if (act.dataset.action === "logout") logout();
 });
 
 document.addEventListener("change", e => {
-  if (e.target.id === "m-sub" || e.target.id === "m-date") updateMarkNote();
   if (e.target.id === "h-sub") { histFilter = e.target.value; renderHistory(); }
 });
 
