@@ -54,6 +54,38 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: v
 </div>
 
 <div id="dash" class="wrap hidden">
+    <section class="card">
+    <h2 style="font-size:18px">Mark Attendance</h2>
+
+    <form id="attendance-form">
+      <label class="label">
+        Student Roll Number
+        <input id="att-roll" required placeholder="Enter roll number">
+      </label>
+
+      <label class="label">
+        Subject
+        <select id="att-sub" required>
+          <option value="">Select subject</option>
+        </select>
+      </label>
+
+      <label class="label">
+        Date
+        <input id="att-date" type="date" required>
+      </label>
+
+      <label class="label">
+        Status
+        <select id="att-status" required>
+          <option value="present">Present</option>
+          <option value="absent">Absent</option>
+        </select>
+      </label>
+
+      <button class="btn" type="submit">Save Attendance</button>
+    </form>
+    </section>
   <div class="row between">
     <h1 style="font-size:24px">Attendance dashboard</h1>
     <button class="btn ghost" id="signout">Sign out</button>
@@ -93,7 +125,40 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: v
       <button class="btn" type="submit">Add subject</button>
     </form>
   </section>
+<section class="card">
+  <h2>Mark Attendance</h2>
+
+  <form id="attendance-form">
+    <label class="label">
+      Student Roll Number
+      <input id="att-roll" required placeholder="Enter roll number">
+    </label>
+
+    <label class="label">
+      Subject
+      <select id="att-sub" required>
+        <option value="">Select subject</option>
+      </select>
+    </label>
+
+    <label class="label">
+      Date
+      <input id="att-date" type="date" required>
+    </label>
+
+    <label class="label">
+      Status
+      <select id="att-status" required>
+        <option value="present">Present</option>
+        <option value="absent">Absent</option>
+      </select>
+    </label>
+
+    <button class="btn" type="submit">Save Attendance</button>
+  </form>
+</section>    
 </div>
+
 
 <div id="toast" role="status"></div>
 
@@ -165,8 +230,23 @@ function render() {
 function startSync() {
   stopSync();
   stops.push(db.collection("subjects").orderBy("name").onSnapshot(snap => {
-    subjects = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    render();
+   subjects = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+$("#att-sub").innerHTML =
+  `<option value="">Select subject</option>` +
+  subjects.map(s =>
+    `<option value="${esc(s.id)}">${esc(s.name)}</option>`
+  ).join("");
+
+render();
+
+$("#att-sub").innerHTML =
+  `<option value="">Select subject</option>` +
+  subjects.map(s =>
+    `<option value="${esc(s.id)}">${esc(s.name)}</option>`
+  ).join("");
+
+render();
   }, e => toast("Sync error: " + e.message)));
   stops.push(db.collection("records").onSnapshot(snap => {
     records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -207,8 +287,69 @@ $("#sub-form").addEventListener("submit", e => {
     .then(() => { $("#new-sub").value = ""; toast("Subject added"); })
     .catch(err => toast("Could not add: " + err.message));
 });
+$("#attendance-form").addEventListener("submit", async e => {
+  e.preventDefault();
 
-$("#export").addEventListener("click", () => {
+  const roll = $("#att-roll").value.trim();
+  const subjectId = $("#att-sub").value;
+  const date = $("#att-date").value;
+  const status = $("#att-status").value;
+
+  if (!roll || !subjectId || !date) {
+    toast("Please complete all fields");
+    return;
+  }
+
+  const recordId = roll + "_" + subjectId + "_" + date;
+
+  try {
+    await db.collection("records").doc(recordId).set({
+      roll: roll,
+      subjectId: subjectId,
+      date: date,
+      status: status,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    toast("Attendance saved successfully!");
+    $("#attendance-form").reset();
+
+  } catch (err) {
+    toast("Could not save: " + err.message);
+  }
+});
+  $("#attendance-form").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const roll = $("#att-roll").value.trim();
+  const subjectId = $("#att-sub").value;
+  const date = $("#att-date").value;
+  const status = $("#att-status").value;
+
+  if (!roll || !subjectId || !date) {
+    toast("Please complete all fields");
+    return;
+  }
+
+  const recordId = roll + "_" + subjectId + "_" + date;
+
+  try {
+    await db.collection("records").doc(recordId).set({
+      roll: roll,
+      subjectId: subjectId,
+      date: date,
+      status: status,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    toast("Attendance saved successfully!");
+    $("#attendance-form").reset();
+
+  } catch (err) {
+    toast("Could not save: " + err.message);
+  }
+});
+  $("#export").addEventListener("click", () => {
   const cell = v => `"${String(v).replace(/"/g, '""')}"`;
   const lines = [["Roll", "Name", "Subject", "Date", "Status"], ...exportRows]
     .map(row => row.map(cell).join(","));
