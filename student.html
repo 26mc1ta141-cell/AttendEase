@@ -246,7 +246,6 @@ function renderHistory() {
           <div class="small muted">${fmtDate(r.date)}</div></div>
         <div class="row" style="flex-wrap:nowrap">
           <span class="pill ${present ? "ok" : "bad"}">${present ? "Present" : "Absent"}</span>
-          <button class="btn danger" data-action="del" data-id="${esc(r.id)}">Delete</button>
         </div>
       </div>`;
   }).join("") : `<p class="muted">No records yet. Mark attendance to see it here.</p>`;
